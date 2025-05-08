@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
+error NotOwner();
+
+contract Errors{
+
+    mapping ( uint256 => address ) public _owners;
+
+    function transferOwner1(uint256 tokenID, address newOwner) external {
+        if(_owners[tokenID] != msg.sender){
+            revert NotOwner();
+        }
+        _owners[tokenID] = newOwner;
+    }
+
+}
+
 contract TestException{
 
     mapping(address => uint256) public balanceOf;

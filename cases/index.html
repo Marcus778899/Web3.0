@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vote DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+</head>
+<body>
+  <h1>Vote DApp</h1>
+
+  <input id="candidateName" placeholder="Candidate name" />
+  <button onclick="addCandidate()">Add Candidate (owner only)</button>
+  <br/><br/>
+
+  <input id="voteName" placeholder="Vote for..." />
+  <button onclick="vote()">Vote</button>
+  <br/><br/>
+
+  <button onclick="getVotes()">Show Results</button>
+  <div id="result"></div>
+
+  <script>
+    const contractAddress = "";
+    const abi = [ [
+	[
+]
+] ];
+
+    let provider, signer, contract;
+
+    async function init() {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      contract = new ethers.Contract(contractAddress, abi, signer);
+    }
+
+    async function addCandidate() {
+      const name = document.getElementById("candidateName").value;
+      const tx = await contract.addCandidate(name);
+      await tx.wait();
+      alert("Candidate added!");
+    }
+
+    async function vote() {
+      const name = document.getElementById("voteName").value;
+      const tx = await contract.vote(name);
+      await tx.wait();
+      alert("Voted!");
+    }
+
+    async function getVotes() {
+      const result = await contract.getAllVotes();
+      const names = result[0];
+      const counts = result[1];
+
+      let display = "<ul>";
+      for (let i = 0; i < names.length; i++) {
+        display += `<li>${names[i]}: ${counts[i]}</li>`;
+      }
+      display += "</ul>";
+
+      document.getElementById("result").innerHTML = display;
+    }
+
+    init();
+  </script>
+</body>
+</html>
