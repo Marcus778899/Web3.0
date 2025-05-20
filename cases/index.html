@@ -1,68 +1,99 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vote DApp</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <title>Vote dApp</title>
 </head>
 <body>
-  <h1>Vote DApp</h1>
+  <h2>Voting interactive interface</h2>
 
-  <input id="candidateName" placeholder="Candidate name" />
-  <button onclick="addCandidate()">Add Candidate (owner only)</button>
-  <br/><br/>
+  <div>
+    <h3>Voting</h3>
+    <input type="text" id="voteInput" placeholder="Enter candidate name" />
+    <button id="voteBtn">Vote</button>
+  </div>
 
-  <input id="voteName" placeholder="Vote for..." />
-  <button onclick="vote()">Vote</button>
-  <br/><br/>
+  <div>
+    <h3>Query votes for all candidates</h3>
+    <button id="loadVotesBtn">Loading Tickets</button>
+    <ul id="voteList"></ul>
+  </div>
 
-  <button onclick="getVotes()">Show Results</button>
-  <div id="result"></div>
+  <div>
+    <h3>Add new candidate (for contract owner only)</h3>
+    <input type="text" id="newCandidateInput" placeholder="Enter new candidate name" />
+    <button id="addCandidateBtn">Add</button>
+  </div>
 
-  <script>
-    const contractAddress = "";
-    const abi = [ [
-	[
-]
-] ];
+  <script type="module">
+    import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js";
 
-    let provider, signer, contract;
+    const contractAddress = "0x8bc9c12392ebe55a0e98a8faeff08cc3a156d6a3";
+    const abi = [ 
+      "function vote(string _name)",
+      "function getAllVotes() view returns (string[] memory, uint[] memory)",
+      "function addCandidate(string _name)"
+    ];
 
-    async function init() {
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      contract = new ethers.Contract(contractAddress, abi, signer);
-    }
-
-    async function addCandidate() {
-      const name = document.getElementById("candidateName").value;
-      const tx = await contract.addCandidate(name);
-      await tx.wait();
-      alert("Candidate added!");
+    async function getContract(signerOrProvider) {
+      return new ethers.Contract(contractAddress, abi, signerOrProvider);
     }
 
     async function vote() {
-      const name = document.getElementById("voteName").value;
-      const tx = await contract.vote(name);
-      await tx.wait();
-      alert("Voted!");
-    }
-
-    async function getVotes() {
-      const result = await contract.getAllVotes();
-      const names = result[0];
-      const counts = result[1];
-
-      let display = "<ul>";
-      for (let i = 0; i < names.length; i++) {
-        display += `<li>${names[i]}: ${counts[i]}</li>`;
+      const candidate = document.getElementById("voteInput").value.trim();
+      if (!candidate) return alert("Please enter candidate name");
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const contract = await getContract(signer);
+        const tx = await contract.vote(candidate);
+        await tx.wait();
+        alert(`Successfully voted for ${candidate}`);
+      } catch (e) {
+        console.error(e);
+        alert("Voting failed" + (e?.data?.message || e.message));
       }
-      display += "</ul>";
-
-      document.getElementById("result").innerHTML = display;
     }
 
-    init();
+    async function loadVotes() {
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const contract = await getContract(provider);
+        const [names, counts] = await contract.getAllVotes();
+        const ul = document.getElementById("voteList");
+        ul.innerHTML = "";
+        for (let i = 0; i < names.length; i++) {
+          const li = document.createElement("li");
+          li.textContent = `${names[i]}:${counts[i].toString()} tickets`;
+          ul.appendChild(li);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to read votes");
+      }
+    }
+
+    async function addCandidate() {
+      const name = document.getElementById("newCandidateInput").value.trim();
+      if (!name) return alert("Please enter candidate name");
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const contract = await getContract(signer);
+        const tx = await contract.addCandidate(name);
+        await tx.wait();
+        alert(`Successfully added candidate ${name}`);
+      } catch (e) {
+        console.error(e);
+        alert("Adding a new candidate failed " + (e?.data?.message || e.message));
+      }
+    }
+
+    document.getElementById("voteBtn").addEventListener("click", vote);
+    document.getElementById("loadVotesBtn").addEventListener("click", loadVotes);
+    document.getElementById("addCandidateBtn").addEventListener("click", addCandidate);
+
   </script>
 </body>
 </html>
